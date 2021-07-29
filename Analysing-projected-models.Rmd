@@ -1,0 +1,308 @@
+---
+title: "Analysing-projected-models"
+author: "Gerardo Martín"
+date: "2/10/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(raster); library(ggplot2);library(reshape); library(foreach); library(data.table)
+```
+
+```{r}
+incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+proj.files <- list.files("Incidence-projections", "rds", full.names = T)
+projections <- lapply(proj.files, readRDS)
+```
+
+```{r}
+library(foreach); library(data.table)
+scenarios <- substr(proj.files, 34, nchar(proj.files) - 4)
+
+med.projs <- lapply(projections, function(x){
+      d <- foreach(i = seq_along(x), .combine = rbind) %do% {colMeans(x[[i]])}
+      d <- data.frame(d)
+      d$year <- 2010:2050
+      return(d)
+})
+med.projs <- lapply(seq_along(med.projs), 
+       function(x){
+             med.projs[[x]]$scenario <- scenarios[x]
+             return(med.projs[[x]])
+             })
+med.projs.df <- rbindlist(med.projs)
+med.projs.df$scen <- med.projs.df$scenario
+```
+
+
+```{r}
+library(ggplot2)
+env.time <-  ggplot(med.projs.df) + 
+      geom_point(aes(x = year, y = env.med, colour = scen), size = 0.25) +
+      geom_line(aes(x = year, y = env.med, colour = scen), size = 0.25) +  
+      geom_ribbon(aes(x = year, ymin = env.025, ymax = env.97, fill = scen), alpha = 0.1) +
+      geom_hline(yintercept = mean(incid.data$envenomings), colour = "grey50") + 
+      geom_smooth(aes(x = year, y = env.med, colour = scen, fill = scen), alpha = 0.2, size = 1, method = "lm") +
+      labs(x = "Year", y = "Envenoming incidence", colour = "Scenario", fill = "Scenario") +
+   theme_light() + 
+   theme(axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+env.time
+```
+
+```{r}
+decline.model <- lm(env.med ~ 0 + scen + scen : year, data = med.projs.df)
+sum.mod <- summary(decline.model) 
+sum.mod
+```
+
+```{r fig.height=4, fig.width=6}
+rates <- data.frame(sum.mod$coefficients)
+
+rates.df <- rates[8:14,]
+rates.df$proj <- c("SSP1", 
+                   "SSP2 CNRM-CM5", "SSP2 GFDL-CM3", "SSP2 MPI-ESM-LR", 
+                   "SSP5 CNRM-CM5", "SSP5 GFDL-CM3", "SSP5 MPI-ESM-LR")
+```
+
+
+```{r fig.height=4, fig.width=2}
+rates.plot <- ggplot(rates.df) + geom_boxplot(aes(x = 1, y = Estimate)) + 
+   geom_point(aes(x = 1, y = Estimate, colour = proj), size = 3, position = position_dodge(0.3))+
+   geom_linerange(aes(x = 1, ymin = Estimate - Std..Error, ymax = Estimate + Std..Error, colour = proj), position = position_dodge(0.3)) +
+   labs(colour = "Scenario", y = "Absolute incidence change per year",
+        x = "") + 
+   theme(axis.text.x = element_text(size = 0),
+         legend.position = "none")
+rates.plot
+```
+
+```{r fig.height=6, fig.width=12}
+source("Random-functions/multiplot.R")
+
+multiplot(rates.plot, env.time, layout = matrix(c(1, 2, 2, 2, 2, 2), ncol = 6))
+dir.create("Plots")
+pdf("Plots/Evenoming-change.pdf", width = 12, height = 6)
+multiplot(rates.plot, env.time, layout = matrix(c(1, 2, 2, 2, 2, 2), ncol = 6))
+dev.off()
+```
+# Estimate pixel-wise rate of change
+
+```{r}
+env.changes <- lapply(projections, function(x){lapply(x, function(x1){x1$env.med})})
+env.changes <- lapply(env.changes, function(x){
+   foreach(i = seq_along(x), .combine = cbind) %do% {
+      x[[i]]
+   }
+})
+
+change.models <- lapply(env.changes, function(x){
+   foreach(i = 1:nrow(x), .combine = rbind) %do% {
+      df <- data.frame(env <- x[i, ], time = 1:41)
+      model <- lm(env ~ time, data = df)
+      r2 <- summary(model)$adj.r.squared
+      P <- summary(model)$coefficients[2, 4]
+      return(c(rate = model$coefficients["time"], P = P, r2 = r2))
+   }
+})
+
+ch.mods <- foreach(i = 1:7, .combine = rbind) %do% {
+   rate <- change.models[[i]][, 1]
+   P <- change.models[[i]][, 2]
+   r2 <- change.models[[i]][, 3]
+   scen <- scenarios[i]
+   return(data.frame(x = incid.data$x,
+                     y = incid.data$y,
+                     rate = rate,
+                     P = P,
+                     r2 = r2,
+                     scenario = scen))
+}
+```
+
+
+```{r fig.height=15, fig.width=3}
+library(viridis)
+
+ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) + 
+   facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = (inferno(100))) +
+   labs(fill = "Annual rate \n of change") +
+   theme_light()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+
+pdf("Plots/Spatial-rates.of change.pdf", width = 3, height = 15)
+ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) + 
+   facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = (inferno(100))) +
+   labs(fill = "Annual rate \n of change") +
+   theme_light()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+dev.off()
+```
+
+```{r fig.height=15, fig.width=3}
+ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = r2)) + 
+   facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = (inferno(100))) +
+   labs(fill = expression(italic(R)^2)) +
+   theme_light()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+
+ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = P)) + 
+   facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = (inferno(100))) +
+   labs(fill = expression(italic(P))) +
+   theme_light()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+
+pdf("Plots/Spatial-r2.pdf", width = 3, height = 15)
+ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = r2)) + 
+   facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = (inferno(100))) +
+   labs(fill = expression(italic(R)^2)) +
+   theme_light()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+dev.off()
+
+```
+
+# SSPs and latitude
+
+Summarise by latitude and scenario, consider averaged ssp along longitude and envenoming only, then create hovmoller plot of incidence change through time
+
+```{r}
+library(dplyr)
+library(data.table)
+incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+
+SSP <- c("SSP1", rep("SSP2", 3),
+                 rep("SSP5", 3))
+
+projs.df <- projections
+
+for(i in seq_along(projs.df)){
+   for(j in seq_along(projs.df[[i]])){
+      projs.df[[i]][[j]]$year <- c(2010:2050)[j]
+      projs.df[[i]][[j]]$scenario <- rates.df$proj[i]
+      projs.df[[i]][[j]]$SSP <- SSP[i]
+      projs.df[[i]][[j]] <- cbind(incid.data[, c("x", "y")], projs.df[[i]][[j]])
+   }
+   projs.df[[i]] <- rbindlist(projs.df[[i]])
+}
+projs.df <- rbindlist(projs.df)
+```
+
+```{r}
+projs.df.sum <- projs.df %>% group_by(x, SSP, year) %>% summarise(
+   sb.med = mean(sb.med),
+   sb.025 = mean(sb.025),
+   sb.97 = mean(sb.97),
+   env.med = mean(env.med),
+   env.025 = mean(env.025), 
+   env.97 = mean(env.97),
+   y = y)
+```
+
+```{r fig.height=6, fig.width=12}
+library(viridis)
+
+prob.env <- ggplot(projs.df.sum) + geom_tile(aes(x = year, y = y, fill = env.med/sb.med)) +
+   facet_wrap(~ SSP) + 
+   scale_fill_gradientn(colours = rev(inferno(50))) +
+   labs(x = "Year", y = "Latitude", fill = paste0("Latitude-averaged", "\n",
+                                                  "probability that bites", "\n", 
+                                                  "result in envenoming")) + 
+   theme_dark()+
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5),
+         legend.text = element_text(angle = 45, vjust = 0.5))
+
+prob.env
+
+pdf("Plots/Probability-envenoming-LAT-TIME.pdf", width = 12, height = 6)
+prob.env
+dev.off()
+```
+
+
+# Identifying envenoming snake species
+
+```{r}
+spp <- c("Bungarus caeruleus", "Bungarus ceylonicus",
+         "Daboia russelii", "Echis carinatus",
+         "Hypnale spp.", "Naja naja",
+         "Trimeresurus trigonocephalus")
+proj.sn <- lapply(seq_along(projections), function(x){
+   df <- rbindlist(lapply(ceiling(seq(1, 41, len = 4)), function(x1){
+         return(data.frame(incid.data[, c("x", "y")], Species = spp[projections[[x]][[x1]]$snakes],
+                           year = c(2010:2050)[x1]))
+      }))
+   df$scenario <- scenarios[x]
+   return(df)
+})
+
+proj.sn.df <- rbindlist(proj.sn)
+```
+
+```{r fig.height=15, fig.width=6.5}
+ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) + 
+   facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
+   scale_fill_manual(values = rev(plasma(5))[2:5]) + 
+   labs(fill = "") +
+   theme_light() + 
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         legend.text = element_text(face = "italic", size = 12),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12))
+pdf("Plots/Snake-species-time-scenario.pdf", width = 6.5, height = 15)
+ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) + 
+   facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
+   scale_fill_manual(values = rev(inferno(5))[2:5]) + 
+   labs(fill = "") +
+   theme_light() + 
+   theme(legend.position = "bottom",
+         axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
+         axis.text.y = element_text(size = 6),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_text(size = 12),
+         legend.text = element_text(face = "italic", size = 12))
+dev.off()
+```
+

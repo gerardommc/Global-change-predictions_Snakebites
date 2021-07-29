@@ -4,7 +4,7 @@
 format.proj.data <- function(file = "", max.s){
       require(readODS)
       l <- readRDS(file)
-      idx <- read.csv("Incidence analyses/Agressivenes-indices.csv")
+      idx <- read.csv("../Snakebite-zoonotic-transmission/Data/Agressivenes-indices.csv")
       rel.abund <- read_ods("../Questionnaires/Parameters-questions.ods",
                              sheet = 2)$Density_5k
       
@@ -24,15 +24,15 @@ format.proj.data <- function(file = "", max.s){
       return(df)
 }
 
-sb.func <- function(S, log.hum, hum.pop, land.cover, beta0, beta1, ind, aggr){
-   S.1 <- sweep(as.matrix(S), 2, aggr * ind/100, "*")
+sb.func <- function(S, log.hum, hum.pop, land.cover, beta0, beta1, ind, aggr, rho){
+   S.1 <- sweep(as.matrix(S), 2, aggr * ind, "*")
    S.sum <- rowSums(S.1)
-   Beta <- exp(log(100) + beta0[land.cover] + beta1[land.cover] * log.hum^2)
-   P <- 1 - exp(-Beta * S.sum)
+   Beta <- exp(beta0[land.cover] + beta1[land.cover] * log.hum^2)
+   P <- (1 - exp(-Beta * S.sum))*exp(rho)
    return(P)
 }
 
-env.func <- function(S, H.bit, hum.pop, log.hum, land.cover, s.effects, int, sever, beta0, beta1){
+env.func <- function(S, H.bit, hum.pop, log.hum, land.cover, s.effects, int, sever, beta0, beta1, rho){
    S.1 <- sweep(S, 2, sever, "*")
    Beta.i <- exp(beta0[land.cover] + beta1[land.cover] * log.hum^2)
    S.2 <- sweep(S.1, 1, Beta.i, "*")
@@ -44,7 +44,7 @@ env.func <- function(S, H.bit, hum.pop, log.hum, land.cover, s.effects, int, sev
    pars <- c(int, s.effects)
    P <- binomial()$linkinv(pars  %*% t(as.matrix(df))) 
    H.env <- c(P) * H.bit
-   P.env <- H.env/hum.pop
+   P.env <- (H.env/hum.pop)*exp(rho)
    return(P.env)
 }
 
@@ -58,17 +58,17 @@ snake.env.contrib <- function(S, H.bit, hum.pop, log.hum, land.cover,
 }
 
 #Incidence data
-incid.data <- readRDS("Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
 S <- incid.data[, 3:9]
 max.s <- apply(S, 2, max)
 #Loading up models
 
-library(R2jags)
-sb.model <- readRDS("Potential incidence results/JAGS-models-results/Snakebites-mass-action-JAGS-model.rds")
-env.model <- readRDS("Potential incidence results/JAGS-models-results/Envenoming-JAGS-model.rds")
+library(coda)
+sb.model <- readRDS("../Snakebite-zoonotic-transmission/Model-results/Snakebites-mass-action-NIMBLE-model.rds")
+env.model <- readRDS("../Snakebite-zoonotic-transmission/Model-results/Envenoming-NIMBLE-model.rds")
 
-sb.mcmc <- sb.model$BUGSoutput$sims.matrix
-env.mcmc <- env.model$BUGSoutput$sims.matrix
+sb.mcmc <- rbind(sb.model[[1]], sb.model[[2]], sb.model[[3]])
+env.mcmc <- rbind(env.model[[1]], env.model[[2]], env.model[[3]])
 
 sb.summary <- list(
  beta0 = data.frame(
@@ -88,13 +88,19 @@ sb.summary <- list(
     ints = t(apply(sb.mcmc[, paste0("indices[", 1:7, "]")], 2, function(x){
        HPDinterval(as.mcmc(x), 0.95)
     }))
+ ),
+ rho = data.frame(
+    median = apply(sb.mcmc[, paste0("rho[", 1:3057, "]")], 2, median),
+    ints = t(apply(sb.mcmc[, paste0("rho[", 1:3057, "]")], 2, function(x){
+       HPDinterval(as.mcmc(x), 0.95)
+    }))
  )
 )
 
 env.summary <- list(
    int = data.frame(
-      median = apply(env.mcmc[, paste0("int[", 1:5, "]")], 2, median),
-      ints = t(apply(env.mcmc[, paste0("int[", 1:5, "]")], 2, function(x){
+      median = apply(env.mcmc[, paste0("inter[", 1:5, "]")], 2, median),
+      ints = t(apply(env.mcmc[, paste0("inter[", 1:5, "]")], 2, function(x){
          HPDinterval(as.mcmc(x), 0.95)
       }))
    ),
@@ -103,15 +109,21 @@ env.summary <- list(
       ints = t(apply(env.mcmc[, paste0("s.effects[", 1:7, "]")], 2, function(x){
          HPDinterval(as.mcmc(x), 0.95)
       }))
+   ),
+   rho = data.frame(
+      median = apply(env.mcmc[, paste0("rho[", 1:3057, "]")], 2, median),
+      ints = t(apply(env.mcmc[, paste0("rho[", 1:3057, "]")], 2, function(x){
+         HPDinterval(as.mcmc(x), 0.95)
+      }))
    )
 )
 
 #Indices
-agr.ind <- read.csv("Incidence analyses/Agressivenes-indices.csv")
+agr.ind <- read.csv("../Snakebite-zoonotic-transmission/Data/Agressivenes-indices.csv")
 
-proj.files <- list.files("../Population projections/Incid-models", "rds", full.names = T)
+proj.files <- list.files("Incid-models", "rds", full.names = T)
 
-proj.names <- list.files("../Population projections/Incid-models", "rds", full.names = F)
+proj.names <- list.files("Incid-models", "rds", full.names = F)
 proj.names <- paste0("Projection", substr(proj.names, 10, nchar(proj.names)))
 
 dir.create("../Population projections/Incidence-projections")
@@ -128,7 +140,8 @@ for(i in seq_along(proj.files)){
                           beta0 = sb.summary$beta0[, k],
                           beta1 = sb.summary$beta1[, k],
                           ind = sb.summary$ind[, k],
-                          aggr = agr.ind$Agressiveness/10)
+                          aggr = agr.ind$Agressiveness/10,
+                 rho = sb.summary$rho[, k])
          } #Working fine
       
          env.incid <- foreach(k = 1:3, .combine = cbind) %do% { 
@@ -141,7 +154,9 @@ for(i in seq_along(proj.files)){
                             int = env.summary$int[, k],
                             sever = agr.ind$Severity/10,
                             beta0 = sb.summary$beta0[, k],
-                            beta1 = sb.summary$beta1[, k])
+                            beta1 = sb.summary$beta1[, k],
+                            rho = env.summary$rho[, k]
+                     )
          }
          
          k = 1
@@ -161,7 +176,7 @@ for(i in seq_along(proj.files)){
                      "env.med", "env.025", "env.97", "snakes")
       return(df)
    }
-   saveRDS(projection, paste0("../Population projections/Incidence-projections/",
+   saveRDS(projection, paste0("Incidence-projections/",
                               proj.names[i]))
 }
 

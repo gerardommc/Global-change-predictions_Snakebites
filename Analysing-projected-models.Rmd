@@ -41,12 +41,12 @@ med.projs.df$scen <- med.projs.df$scenario
 
 ```{r}
 library(ggplot2)
-env.time <-  ggplot(med.projs.df) + 
+env.time <-  ggplot(med.projs.df) +   
+      geom_ribbon(aes(x = year, ymin = env.025, ymax = env.97, fill = scen), alpha = 0.05) +
       geom_point(aes(x = year, y = env.med, colour = scen), size = 0.25) +
-      geom_line(aes(x = year, y = env.med, colour = scen), size = 0.25) +  
-      geom_ribbon(aes(x = year, ymin = env.025, ymax = env.97, fill = scen), alpha = 0.1) +
-      geom_hline(yintercept = mean(incid.data$envenomings), colour = "grey50") + 
-      geom_smooth(aes(x = year, y = env.med, colour = scen, fill = scen), alpha = 0.2, size = 1, method = "lm") +
+      geom_line(aes(x = year, y = env.med, colour = scen), size = 0.25, linetype = "dotted") +
+      geom_hline(yintercept = mean(incid.data$envenomings), colour = "grey50", linetype = "dashed") + 
+      geom_smooth(aes(x = year, y = env.med, colour = scen, fill = scen), alpha = 0.2, size = 0.75, method = "lm") +
       labs(x = "Year", y = "Envenoming incidence", colour = "Scenario", fill = "Scenario") +
    theme_light() + 
    theme(axis.text.x = element_text(angle = 45, vjust = 0.7))
@@ -67,17 +67,19 @@ rates.df <- rates[8:14,]
 rates.df$proj <- c("SSP1", 
                    "SSP2 CNRM-CM5", "SSP2 GFDL-CM3", "SSP2 MPI-ESM-LR", 
                    "SSP5 CNRM-CM5", "SSP5 GFDL-CM3", "SSP5 MPI-ESM-LR")
+rates.df$signif <- as.factor(ifelse(rates.df$Pr...t.. > 0.05, 0, 1))
 ```
 
 
 ```{r fig.height=4, fig.width=2}
 rates.plot <- ggplot(rates.df) + geom_boxplot(aes(x = 1, y = Estimate)) + 
-   geom_point(aes(x = 1, y = Estimate, colour = proj), size = 3, position = position_dodge(0.3))+
+   geom_point(aes(x = 1, y = Estimate, colour = proj, shape = signif ), size = 3, position = position_dodge(0.3))+
+   scale_shape_manual(values = c(4, 20)) +
    geom_linerange(aes(x = 1, ymin = Estimate - Std..Error, ymax = Estimate + Std..Error, colour = proj), position = position_dodge(0.3)) +
    labs(colour = "Scenario", y = "Absolute incidence change per year",
         x = "") + 
    theme(axis.text.x = element_text(size = 0),
-         legend.position = "none")
+         legend.position = "none") 
 rates.plot
 ```
 
@@ -243,7 +245,9 @@ library(viridis)
 
 prob.env <- ggplot(projs.df.sum) + geom_tile(aes(x = year, y = y, fill = env.med/sb.med)) +
    facet_wrap(~ SSP) + 
-   scale_fill_gradientn(colours = rev(inferno(50))) +
+   scale_fill_gradientn(colours = rev(inferno(50)), 
+                        breaks = round(seq(0.45, 0.7, len = 5), 2),
+                        limits = c(0.4, 0.75)) +
    labs(x = "Year", y = "Latitude", fill = paste0("Latitude-averaged", "\n",
                                                   "probability that bites", "\n", 
                                                   "result in envenoming")) + 
@@ -280,7 +284,7 @@ proj.sn.df <- rbindlist(proj.sn)
 ```
 
 ```{r fig.height=15, fig.width=6.5}
-ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) + 
+ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = as.factor(Species))) + 
    facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
    scale_fill_manual(values = rev(plasma(5))[2:5]) + 
    labs(fill = "") +

@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r warning=F, message=FALSE}
 library(raster); library(ggplot2);library(reshape); library(foreach); library(data.table)
 ```
 
@@ -20,7 +20,6 @@ projections <- lapply(proj.files, readRDS)
 ```
 
 ```{r}
-library(foreach); library(data.table)
 scenarios <- substr(proj.files, 34, nchar(proj.files) - 4)
 
 med.projs <- lapply(projections, function(x){
@@ -68,6 +67,8 @@ rates.df$proj <- c("SSP1",
                    "SSP2 CNRM-CM5", "SSP2 GFDL-CM3", "SSP2 MPI-ESM-LR", 
                    "SSP5 CNRM-CM5", "SSP5 GFDL-CM3", "SSP5 MPI-ESM-LR")
 rates.df$signif <- as.factor(ifelse(rates.df$Pr...t.. > 0.05, 0, 1))
+rates.df$SSP <- as.factor(substr(rates.df$proj, 1, 4))
+rates.df$Percent.decline <- rates.df$Estimate/mean(incid.data$envenomings) * 100
 ```
 
 
@@ -81,6 +82,32 @@ rates.plot <- ggplot(rates.df) + geom_boxplot(aes(x = 1, y = Estimate)) +
    theme(axis.text.x = element_text(size = 0),
          legend.position = "none") 
 rates.plot
+```
+
+```{r fig.height=4, fig.width=3}
+percent.plot <- ggplot(rates.df) + geom_bar(aes(x = proj, y = Percent.decline*(-1), colour = proj, fill = proj),
+                                            stat = "identity", alpha = 0.5)+
+   scale_shape_manual(values = c(4, 20)) +
+   labs(colour = "Scenario", y = "Percent change per year",
+        x = "") + 
+   theme(axis.text.x = element_text(size = 0),
+         legend.position = "none") 
+percent.plot
+```
+
+```{r}
+med.projs.df$year[1]
+
+scen <- levels(as.factor(med.projs.df$scen))
+
+new.data.2050 <- expand.grid(scen = scen, year = 2050)
+new.data.2010 <- expand.grid(scen = scen, year = 2010)
+
+preds.2050 <- predict(decline.model, newdata = new.data.2050)
+preds.2010 <- predict(decline.model, newdata = new.data.2010)
+
+Percent.decline <- (preds.2010-preds.2050)/mean(incid.data$envenomings) * 100
+Percent.decline
 ```
 
 ```{r fig.height=6, fig.width=12}
@@ -133,7 +160,7 @@ library(viridis)
 ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) + 
    facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
    scale_fill_gradientn(colours = (inferno(100))) +
-   labs(fill = "Annual rate \n of change") +
+   labs(fill = "Annual \n rate") +
    theme_light()+
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
@@ -141,13 +168,13 @@ ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) +
          legend.text = element_text(angle = 45, vjust = 0.5),
          legend.title = element_text(size = 14),
          strip.text.x = element_text(size = 12),
-         strip.text.y = element_text(size = 12))
+         strip.text.y = element_blank())
 
 pdf("Plots/Spatial-rates.of change.pdf", width = 3, height = 15)
 ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) + 
    facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
    scale_fill_gradientn(colours = (inferno(100))) +
-   labs(fill = "Annual rate \n of change") +
+   labs(fill = "Annual \n change") +
    theme_light()+
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
@@ -155,7 +182,7 @@ ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) +
          legend.text = element_text(angle = 45, vjust = 0.5),
          legend.title = element_text(size = 14),
          strip.text.x = element_text(size = 12),
-         strip.text.y = element_text(size = 12))
+         strip.text.y = element_blank())
 dev.off()
 ```
 
@@ -180,7 +207,7 @@ ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = P)) +
    theme_light()+
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
-         axis.text.y = element_text(size = 6),
+         axis.text.y = element_blank(),
          legend.text = element_text(angle = 45, vjust = 0.5),
          legend.title = element_text(size = 14),
          strip.text.x = element_text(size = 12),
@@ -194,7 +221,8 @@ ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = r2)) +
    theme_light()+
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
-         axis.text.y = element_text(size = 6),
+         axis.text.y = element_blank(),
+         axis.title.y = element_blank(),
          legend.text = element_text(angle = 45, vjust = 0.5),
          legend.title = element_text(size = 14),
          strip.text.x = element_text(size = 12),

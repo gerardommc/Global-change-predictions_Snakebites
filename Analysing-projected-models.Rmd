@@ -56,7 +56,6 @@ env.time
 ```{r}
 decline.model <- lm(env.med ~ 0 + scen + scen : year, data = med.projs.df)
 sum.mod <- summary(decline.model) 
-sum.mod
 ```
 
 ```{r fig.height=4, fig.width=6}
@@ -68,7 +67,6 @@ rates.df$proj <- c("SSP1",
                    "SSP5 CNRM-CM5", "SSP5 GFDL-CM3", "SSP5 MPI-ESM-LR")
 rates.df$signif <- as.factor(ifelse(rates.df$Pr...t.. > 0.05, 0, 1))
 rates.df$SSP <- as.factor(substr(rates.df$proj, 1, 4))
-rates.df$Percent.decline <- rates.df$Estimate/mean(incid.data$envenomings) * 100
 ```
 
 
@@ -84,17 +82,6 @@ rates.plot <- ggplot(rates.df) + geom_boxplot(aes(x = 1, y = Estimate)) +
 rates.plot
 ```
 
-```{r fig.height=4, fig.width=3}
-percent.plot <- ggplot(rates.df) + geom_bar(aes(x = proj, y = Percent.decline*(-1), colour = proj, fill = proj),
-                                            stat = "identity", alpha = 0.5)+
-   scale_shape_manual(values = c(4, 20)) +
-   labs(colour = "Scenario", y = "Percent change per year",
-        x = "") + 
-   theme(axis.text.x = element_text(size = 0),
-         legend.position = "none") 
-percent.plot
-```
-
 ```{r}
 med.projs.df$year[1]
 
@@ -108,6 +95,18 @@ preds.2010 <- predict(decline.model, newdata = new.data.2010)
 
 Percent.decline <- (preds.2010-preds.2050)/mean(incid.data$envenomings) * 100
 Percent.decline
+rates.df$Percent.decline <- Percent.decline * (-1)
+```
+
+```{r fig.height=4, fig.width=3}
+percent.plot <- ggplot(rates.df) + geom_bar(aes(x = proj, y = Percent.decline*(-1), colour = proj, fill = proj),
+                                            stat = "identity", alpha = 0.5)+
+   scale_shape_manual(values = c(4, 20)) +
+   labs(colour = "Scenario", y = "Percent change per year",
+        x = "") + 
+   theme(axis.text.x = element_text(size = 0),
+         legend.position = "none") 
+percent.plot
 ```
 
 ```{r fig.height=6, fig.width=12}
@@ -291,7 +290,6 @@ prob.env
 dev.off()
 ```
 
-
 # Identifying envenoming snake species
 
 ```{r}
@@ -337,4 +335,118 @@ ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) +
          legend.text = element_text(face = "italic", size = 12))
 dev.off()
 ```
+
+## Land cover change dynamics and envenoming change
+
+```{r}
+scenarios
+
+lc.files <- list.files("Land-cover-5km", "tif", full.names = T, recursive = T)
+
+lc.r <- stack(lc.files)
+
+lc.urban <- reclassify(lc.r, matrix(c(4, 4, 1, -Inf, 3, 0, 4, Inf, 0), 3, 3, byrow = T))# lc.r == 4#
+lc.tea <- reclassify(lc.r, matrix(c(5, 5, 1, -Inf, 4, 0), 2, 3, byrow = T))# lc.r == 2
+lc.agric <- reclassify(lc.r, matrix(c(3, 3, 1, -Inf, 2, 0, 3, Inf, 0), 3, 3, byrow = T))# lc.r == 3
+lc.degraded <- reclassify(lc.r, matrix(c(2, 2, 1, -Inf, 1, 0, 2, Inf, 0), 3, 3, byrow = T))# lc.r == 4
+lc.forest <- reclassify(lc.r, matrix(c(1, 1, 1, -Inf, 0, 0, 1, Inf, 0), 3, 3, byrow = T))# lc.r == 5
+
+lc.urban.m <- cellStats(lc.urban, mean)
+lc.tea.m <- cellStats(lc.tea, mean)
+lc.agric.m <- cellStats(lc.agric, mean)
+lc.degraded.m <- cellStats(lc.degraded, mean)
+lc.forest.m <- cellStats(lc.forest, mean)
+```
+
+```{r}
+med.projs.df$urban <- lc.urban.m
+med.projs.df$tea <- lc.tea.m
+med.projs.df$agric <- lc.agric.m
+med.projs.df$degraded <- lc.degraded.m
+med.projs.df$forest <- lc.forest.m
+```
+
+
+```{r fig.height=5, fig.width=9}
+ggplot(med.projs.df) + geom_point(aes(x = urban, y = env.med, colour = scenario)) +
+    geom_path(aes(x = urban, y = env.med, colour = scenario),
+              arrow = arrow(type = "closed", 
+                          length = unit(0.1, "inches")),
+              linetype = "dotted") +
+    theme_light()
+
+ggplot(med.projs.df) + geom_point(aes(x = agric, y = env.med, colour = scenario),
+                                  size = 0.5) +
+    geom_path(aes(x = agric, y = env.med, colour = scenario),
+              arrow = arrow(type = "closed", 
+                          length = unit(0.15, "inches"),
+                          ends = "last"), size = 0.25) +
+    theme_light()
+
+ggplot(med.projs.df) + geom_point(aes(x = forest, y = env.med, colour = scenario),
+                                  size = 0.5) +
+    geom_path(aes(x = forest, y = env.med, colour = scenario),
+              arrow = arrow(type = "closed", 
+                          length = unit(0.15, "inches"),
+                          ends = "last"), size = 0.25) +
+    theme_light()
+
+
+```
+
+```{r fig.height=12, fig.width=3}
+urb.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = forest, colour = env.med, size = env.med), 
+                                                  alpha = 0.5) + 
+    geom_path(aes(x = urban, y = forest),
+                                 arrow = arrow(type = "closed", 
+                          length = unit(0.15, "inches"),
+                          ends = "first"), size = 0.25) +
+    guides(size = "none") +
+    scale_colour_gradientn(colours = (inferno(100))) +
+    facet_grid(scenario~1) + 
+    labs(x = "Urban cover", y = "Forest cover", colour = "Envenoming\n incidence", size = "") +
+    theme(strip.text.x = element_blank(),
+          legend.position = "bottom",
+          legend.text = element_text(angle = 45, vjust = 0.5))
+```
+
+```{r fig.height=12, fig.width=3}
+agr.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = agric, y = forest, colour = env.med, size = env.med), 
+                                                  alpha = 0.5) + 
+     geom_path(aes(x = agric, y = forest),
+                                 arrow = arrow(type = "closed", 
+                          length = unit(0.15, "inches"),
+                          ends = "first"), size = 0.25) +
+    guides(size = "none") +
+    scale_colour_gradientn(colours = (inferno(100))) +
+    facet_grid(scenario~1) + 
+    labs(x = "Agricultural cover", y = "Forest cover", colour = "Envenoming\n incidence") +
+    theme(strip.text.x = element_blank(),
+          legend.position = "bottom",
+          legend.text = element_text(angle = 45, vjust = 0.5))
+```
+
+```{r  fig.height=12, fig.width=3}
+urb.agric.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = agric, colour = env.med, size = env.med),
+                                                    alpha = 0.5) + 
+    geom_path(aes(x = urban, y = agric), arrow = arrow(type = "closed", 
+                          length = unit(0.15, "inches"),
+                          ends = "first"), size = 0.25) +  guides(size = "none") +
+    scale_colour_gradientn(colours = (inferno(100))) +
+    facet_grid(scenario~1) + 
+    labs(x = "Urban cover", y = "Agricultural cover", colour = "Envenoming\n incidence") +
+    theme(strip.text.x = element_blank(),
+          legend.position = "bottom",
+          legend.text = element_text(angle = 45, vjust = 0.5))
+```
+
+```{r fig.height=12, fig.width=9}
+
+multiplot(urb.for.plot, urb.agric.plot, agr.for.plot, layout = matrix(c(1, 2, 3), ncol = 3))
+
+pdf("Plots/Evenoming-cover.pdf", width = 9, height = 12)
+multiplot(urb.for.plot, urb.agric.plot, agr.for.plot, layout = matrix(c(1, 2, 3), ncol = 3))
+dev.off()
+```
+
 

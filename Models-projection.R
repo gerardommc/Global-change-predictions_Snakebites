@@ -58,7 +58,7 @@ snake.env.contrib <- function(S, H.bit, hum.pop, log.hum, land.cover,
 }
 
 #Incidence data
-incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+incid.data <- readRDS("Data-objects/Incidence models data-Apr2020.rds")
 S <- incid.data[, 3:9]
 max.s <- apply(S, 2, max)
 #Loading up models

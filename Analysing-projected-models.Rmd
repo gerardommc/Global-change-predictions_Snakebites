@@ -14,7 +14,7 @@ library(raster); library(ggplot2);library(reshape); library(foreach); library(da
 ```
 
 ```{r}
-incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+incid.data <- readRDS("Data-objects/Incidence models data-Apr2020.rds")
 proj.files <- list.files("Incidence-projections", "rds", full.names = T)
 projections <- lapply(proj.files, readRDS)
 ```
@@ -339,17 +339,16 @@ dev.off()
 ## Land cover change dynamics and envenoming change
 
 ```{r}
-scenarios
-
 lc.files <- list.files("Land-cover-5km", "tif", full.names = T, recursive = T)
 
 lc.r <- stack(lc.files)
 
-lc.urban <- reclassify(lc.r, matrix(c(4, 4, 1, -Inf, 3, 0, 4, Inf, 0), 3, 3, byrow = T))# lc.r == 4#
-lc.tea <- reclassify(lc.r, matrix(c(5, 5, 1, -Inf, 4, 0), 2, 3, byrow = T))# lc.r == 2
-lc.agric <- reclassify(lc.r, matrix(c(3, 3, 1, -Inf, 2, 0, 3, Inf, 0), 3, 3, byrow = T))# lc.r == 3
-lc.degraded <- reclassify(lc.r, matrix(c(2, 2, 1, -Inf, 1, 0, 2, Inf, 0), 3, 3, byrow = T))# lc.r == 4
-lc.forest <- reclassify(lc.r, matrix(c(1, 1, 1, -Inf, 0, 0, 1, Inf, 0), 3, 3, byrow = T))# lc.r == 5
+#Correr y verificar estas
+lc.tea <- reclassify(lc.r, cbind(from = c(-Inf, 4), to = c(4, 5), becomes = c(0, 1)))
+lc.urban <- reclassify(lc.r, cbind(from = c(-Inf, 3, 4), to = c(3, 4, Inf), becomes = c(0, 1, 0)))
+lc.agric <- reclassify(lc.r, cbind(from = c(-Inf, 2, 3), to = c(2, 3, Inf), becomes = c(0, 1, 0)))# lc.r == 3
+lc.degraded <- reclassify(lc.r, cbind(from = c(-Inf, 1, 2), to = c(1, 2, Inf), becomes = c(0, 1, 0)))
+lc.forest <- reclassify(lc.r, cbind(from = c(-Inf, 1), to = c(1, 5), becomes = c(1, 0)))
 
 lc.urban.m <- cellStats(lc.urban, mean)
 lc.tea.m <- cellStats(lc.tea, mean)
@@ -366,32 +365,29 @@ med.projs.df$degraded <- lc.degraded.m
 med.projs.df$forest <- lc.forest.m
 ```
 
-
 ```{r fig.height=5, fig.width=9}
-ggplot(med.projs.df) + geom_point(aes(x = urban, y = env.med, colour = scenario)) +
-    geom_path(aes(x = urban, y = env.med, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = year, y = urban, colour = scenario)) +
+    geom_path(aes(x = year, y = urban, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.1, "inches")),
               linetype = "dotted") +
     theme_light()
 
-ggplot(med.projs.df) + geom_point(aes(x = agric, y = env.med, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = year, y = forest, colour = scenario),
                                   size = 0.5) +
-    geom_path(aes(x = agric, y = env.med, colour = scenario),
+    geom_path(aes(x = year, y = forest, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "last"), size = 0.25) +
     theme_light()
 
-ggplot(med.projs.df) + geom_point(aes(x = forest, y = env.med, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = degraded, y = env.med, colour = scenario),
                                   size = 0.5) +
-    geom_path(aes(x = forest, y = env.med, colour = scenario),
+    geom_path(aes(x = degraded, y = env.med, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "last"), size = 0.25) +
     theme_light()
-
-
 ```
 
 ```{r fig.height=12, fig.width=3}
@@ -431,7 +427,7 @@ urb.agric.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = agric, co
                                                     alpha = 0.5) + 
     geom_path(aes(x = urban, y = agric), arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
-                          ends = "first"), size = 0.25) +  guides(size = "none") +
+                          ends = "last"), size = 0.25) +  guides(size = "none") +
     scale_colour_gradientn(colours = (inferno(100))) +
     facet_grid(scenario~1) + 
     labs(x = "Urban cover", y = "Agricultural cover", colour = "Envenoming\n incidence") +

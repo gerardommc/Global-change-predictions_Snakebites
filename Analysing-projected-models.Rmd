@@ -358,11 +358,11 @@ lc.forest.m <- cellStats(lc.forest, mean)
 ```
 
 ```{r}
-med.projs.df$urban <- lc.urban.m
-med.projs.df$tea <- lc.tea.m
-med.projs.df$agric <- lc.agric.m
-med.projs.df$degraded <- lc.degraded.m
-med.projs.df$forest <- lc.forest.m
+med.projs.df$Urban <- lc.urban.m
+med.projs.df$Tea <- lc.tea.m
+med.projs.df$Agricultural <- lc.agric.m
+med.projs.df$Degraded <- lc.degraded.m
+med.projs.df$Forest <- lc.forest.m
 ```
 
 ```{r fig.height=5, fig.width=9}
@@ -442,6 +442,30 @@ multiplot(urb.for.plot, urb.agric.plot, agr.for.plot, layout = matrix(c(1, 2, 3)
 
 pdf("Plots/Evenoming-cover.pdf", width = 9, height = 12)
 multiplot(urb.for.plot, urb.agric.plot, agr.for.plot, layout = matrix(c(1, 2, 3), ncol = 3))
+dev.off()
+```
+
+```{r}
+med.projs.df.1050 <- subset(med.projs.df, year %in% c(2010, 2050))
+med.projs.df.2010 <- subset(med.projs.df, year == 2010, select = c("env.med", "Urban", "Tea", "Agricultural", "Degraded", "Forest"))
+med.projs.df.2050 <- subset(med.projs.df, year == 2050, select = c("env.med", "Urban", "Tea", "Agricultural", "Degraded", "Forest"))
+med.projs.df.dif <- (med.projs.df.2050 - med.projs.df.2010)*100
+med.projs.df.dif$Decline <- rates.df$Percent.decline
+med.projs.df.dif$Scenario <- med.projs.df.1050[med.projs.df.1050$year== 2010]$scenario
+
+med.projs.dif.melt <- melt(med.projs.df.dif, measure.vars = c("Urban", "Tea", "Agricultural", "Degraded", "Forest"))
+```
+
+```{r fig.height=12, fig.width=5}
+incid.lc.change <- ggplot(med.projs.dif.melt, aes(x = value, y = Decline,
+                               label = Scenario)) + geom_point(aes(colour = Scenario)) +
+    facet_grid(variable~1) + 
+    geom_vline(xintercept = 0, linetype = 2, colour = "grey50") + 
+    geom_text(nudge_y = 1,  size = 3) +
+    labs(x = "% Land cover change", y = "% Envenoming incidence change") +
+    theme(legend.position = "none")
+pdf("Plots/Incidence-LC-change.pdf", width = 5, height = 12)
+incid.lc.change
 dev.off()
 ```
 

@@ -237,7 +237,7 @@ Summarise by latitude and scenario, consider averaged ssp along longitude and en
 ```{r}
 library(dplyr)
 library(data.table)
-incid.data <- readRDS("../SNAKEBITE MODELLING/Data objects/Incid-models-data-Aug-2020/Incidence models data-Apr2020.rds")
+incid.data <- readRDS("Data-objects/Incidence models data-Apr2020.rds")
 
 SSP <- c("SSP1", rep("SSP2", 3),
                  rep("SSP5", 3))
@@ -335,6 +335,100 @@ ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) +
          legend.text = element_text(face = "italic", size = 12))
 dev.off()
 ```
+
+## Binary changes
+
+```{r}
+bin.change <- subset(ch.mods, select = c("x", "y", "rate", "scenario"))
+lev.scen <- levels(as.factor(bin.change$scenario))
+
+bin.change.l <- lapply(lev.scen, function(x){bin.change[bin.change$scenario == x, -4]})
+
+bin.change.wide <- cbind(bin.change.l[[1]][, c("x", "y")],
+                              bin.change.l[[1]]$rate,
+                              bin.change.l[[2]]$rate,
+                              bin.change.l[[3]]$rate,
+                              bin.change.l[[4]]$rate,
+                              bin.change.l[[5]]$rate,
+                              bin.change.l[[6]]$rate,
+                              bin.change.l[[7]]$rate)
+names(bin.change.wide) <- c("x", "y", lev.scen)
+```
+
+```{r}
+bin.change.r <- rasterFromXYZ(bin.change.wide)
+
+bin.ssp1 <- dropLayer(bin.change.r, i = 2:7)
+bin.ssp2 <- dropLayer(bin.change.r, i = c(1, 5:7))
+bin.ssp5 <- dropLayer(bin.change.r, i = c(1:4))
+
+dec.ssp1 <- bin.ssp1 < 0
+dec.ssp2 <- sum(bin.ssp2 < 0)
+dec.ssp5 <- sum(bin.ssp5 < 0)
+
+df.dec.ssp <- data.frame(rasterToPoints(stack(dec.ssp1, dec.ssp2, dec.ssp5)))
+names(df.dec.ssp) <- c("x", "y", "SSP1", "SSP2", "SSP3")
+
+```
+
+
+```{r}
+df.dec.ssp.long <- melt(df.dec.ssp, id.vars = c("x", "y"))
+
+dec.maps <- ggplot(df.dec.ssp.long) + geom_raster(aes(x = x, y = y, fill = as.factor(value))) +
+    facet_grid(1~variable) + coord_fixed(ratio = 1) + 
+    scale_fill_manual(values = (inferno(5)[c(1, 2, 3, 4)])) + 
+    labs(fill = "") +
+    theme_light() + 
+    theme(legend.position = "right",
+         axis.text.x = element_blank(),
+         axis.title.x = element_blank(),
+         axis.text.y = element_text(size = 6),
+         strip.text.x = element_text(size = 12),
+         strip.text.y = element_blank(),
+         legend.text = element_text(face = "italic", size = 12))
+```
+
+```{r}
+prop.0 <- c(cellStats(dec.ssp1==0, mean),
+            cellStats(dec.ssp2==0, mean),
+            cellStats(dec.ssp5==0, mean))
+prop.1 <- c(cellStats(dec.ssp1==1, mean),
+            cellStats(dec.ssp2==1, mean),
+            cellStats(dec.ssp5==1, mean))
+prop.2  <- c(cellStats(dec.ssp1==2, mean),
+            cellStats(dec.ssp2==2, mean),
+            cellStats(dec.ssp5==2, mean))
+prop.3  <- c(cellStats(dec.ssp1==3, mean),
+            cellStats(dec.ssp2==3, mean),
+            cellStats(dec.ssp5==3, mean))
+gcms <- rep(0:3, each = 3)
+ssps <- rep(c("SSP1", "SSP2", "SSP3"), 4)
+
+dec.prop <- data.frame(prop = c(prop.0, prop.1, prop.2, prop.3)*100,
+                       gcms, SSP = ssps)
+
+dec.prop.plot <- ggplot(dec.prop, aes(x = "", y = prop, fill = as.factor(gcms))) +
+    geom_col() +
+    coord_polar(theta = "y") +
+    facet_grid(1~SSP) +
+    scale_fill_manual(values = (inferno(5)[c(1, 2, 3, 4)])) +
+    labs(x = "", y = "% Area") +
+    theme_minimal() +
+    theme(strip.text.x = element_blank(),
+          strip.text.y = element_blank(),
+          axis.ticks = element_blank(), 
+          legend.position = "none")
+
+```
+
+```{r}
+multiplot(dec.maps, dec.prop.plot, layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+pdf("Plots/Decrease-maps.pdf",width = 5.5, height = 6)
+multiplot(dec.maps, dec.prop.plot, layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+dev.off()
+```
+
 
 ## Land cover change dynamics and envenoming change
 

@@ -254,24 +254,27 @@ jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yel
 ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
    facet_grid(1 ~ scenario) + coord_fixed(ratio = 1) + 
    scale_fill_gradientn(colours = jet.colours(100)) +
-   labs(fill = "% Envenoming \n incidence \n change", x = "", y = "") +
+   labs(fill = "% Envenoming incidence \n change by 2050", x = "", y = "") +
    theme_light()+
    theme(legend.position = "top",
          axis.text.x = element_blank(),
-         axis.text.y = element_blank(),
-         axis.title.y = element_blank(),
+         axis.text.y = element_text(angle = 45, size = 6),
+         axis.title.y =  element_blank(),
          legend.text = element_text(angle = 45, vjust = 0.5),
-         legend.title = element_text(size = 14),
+         legend.title = element_text(size = 12),
          strip.text.x = element_text(size = 8),
          strip.text.y = element_blank())
 
 per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, fill = scenario), stat = "identity", alpha = 0.5) +
-    labs(x = "", y = "") +
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size = 8),
+    labs(x = "", y = "Nation-wide average change") +
+    theme(axis.text.x = element_text(angle = 30, vjust = 0.5, size = 6),
           legend.position = "none")
 
 multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+```
 
+
+```{r}
 pdf("Plots/Total-change.pdf", width = 9, height = 5.5)
 multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 dev.off()

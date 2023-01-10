@@ -248,7 +248,7 @@ library(dplyr)
 per.change <- ch.mods %>% group_by(scenario) %>% summarise(env.change = mean(na.omit(env.change)), env.err = sd(na.omit(env.change)))
 ```
 
-```{r fig.height = 5.5, fig.width=9}
+```{r fig.height = 5, fig.width=9}
 jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yellow2", "darkorange", "red3", "#7F0000"))
 
 ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
@@ -260,19 +260,19 @@ ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) +
          axis.text.x = element_blank(),
          axis.text.y = element_text(size = 6),
          axis.title.y =  element_blank(),
-         legend.text = element_text(angle = 45, vjust = 0.5),
-         legend.title = element_text(size = 12),
+         legend.text = element_text(vjust = 0.5, size = 8),
+         legend.title = element_text(size = 10),
          strip.text.x = element_text(size = 8),
          strip.text.y = element_blank())
 
-per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, fill = scenario), stat = "identity", alpha = 0.5) +
-    labs(x = "", y = "Nation-wide average % change") +
-    theme(axis.text.x = element_text(angle = 30, vjust = 0.5, size = 6),
+per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, colour = scenario), stat = "identity", alpha = 0.5) +
+    labs(x = "", y = "Average % change") +
+    theme(axis.text.x = element_text(vjust = 0.5, size = 6),
           axis.text.y = element_text(size = 8),
           axis.title.y = element_text(size = 10),
           legend.position = "none")
 
-multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2), ncol = 1))
 ```
 
 
@@ -426,7 +426,7 @@ names(df.dec.ssp) <- c("x", "y", "SSP1", "SSP2", "SSP3")
 
 
 ```{r}
-df.dec.ssp.long <- melt(df.dec.ssp, id.vars = c("x", "y"))
+df.dec.ssp.long <- reshape2::melt(df.dec.ssp, id.vars = c("x", "y"))
 
 dec.maps <- ggplot(df.dec.ssp.long) + geom_raster(aes(x = x, y = y, fill = as.factor(value))) +
     facet_grid(1~variable) + coord_fixed(ratio = 1) + 

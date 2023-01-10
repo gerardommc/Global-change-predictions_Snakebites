@@ -134,17 +134,21 @@ change.models <- lapply(env.changes, function(x){
       model <- lm(env ~ time, data = df)
       r2 <- summary(model)$adj.r.squared
       P <- summary(model)$coefficients[2, 4]
-      return(c(rate = model$coefficients["time"], P = P, r2 = r2))
+      return(c(intercept = model$coefficients["(Intercept)"],
+               rate = model$coefficients["time"], 
+               P = P, r2 = r2))
    }
 })
 
 ch.mods <- foreach(i = 1:7, .combine = rbind) %do% {
-   rate <- change.models[[i]][, 1]
+   rate <- change.models[[i]][, 2]
+   intercept<- change.models[[i]][, 1]
    P <- change.models[[i]][, 2]
    r2 <- change.models[[i]][, 3]
    scen <- scenarios[i]
    return(data.frame(x = incid.data$x,
                      y = incid.data$y,
+                     intercept = intercept,
                      rate = rate,
                      P = P,
                      r2 = r2,
@@ -173,7 +177,7 @@ pdf("Plots/Spatial-rates.of change.pdf", width = 3, height = 15)
 ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = rate)) + 
    facet_grid(scenario ~ 1) + coord_fixed(ratio = 1) + 
    scale_fill_gradientn(colours = (inferno(100))) +
-   labs(fill = "Annual \n change") +
+   labs(fill = "") +
    theme_light()+
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
@@ -229,6 +233,50 @@ ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = r2)) +
 dev.off()
 
 ```
+
+# Absolute change between first and last time
+
+```{r}
+total.changes <- ch.mods$rate/rep(incid.data$envenomings, 7)*100
+tot.2010 <- ch.mods$intercept + ch.mods$rate
+tot.2050 <- ch.mods$intercept + ch.mods$rate*41
+ch.mods$env.2010 <- tot.2010
+ch.mods$env.2050 <- tot.2050
+ch.mods$env.change <- with(ch.mods, env.2050/env.2010-env.2010/env.2010)*100
+
+library(dplyr)
+per.change <- ch.mods %>% group_by(scenario) %>% summarise(env.change = mean(na.omit(env.change)), env.err = sd(na.omit(env.change)))
+```
+
+```{r fig.height = 5.5, fig.width=9}
+jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yellow2", "darkorange", "red3", "#7F0000"))
+
+ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
+   facet_grid(1 ~ scenario) + coord_fixed(ratio = 1) + 
+   scale_fill_gradientn(colours = jet.colours(100)) +
+   labs(fill = "% Envenoming \n incidence \n change", x = "", y = "") +
+   theme_light()+
+   theme(legend.position = "top",
+         axis.text.x = element_blank(),
+         axis.text.y = element_blank(),
+         axis.title.y = element_blank(),
+         legend.text = element_text(angle = 45, vjust = 0.5),
+         legend.title = element_text(size = 14),
+         strip.text.x = element_text(size = 8),
+         strip.text.y = element_blank())
+
+per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, fill = scenario), stat = "identity", alpha = 0.5) +
+    labs(x = "", y = "") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size = 8),
+          legend.position = "none")
+
+multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+
+pdf("Plots/Total-change.pdf", width = 9, height = 5.5)
+multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+dev.off()
+```
+
 
 # SSPs and latitude
 

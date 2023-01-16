@@ -248,7 +248,7 @@ library(dplyr)
 per.change <- ch.mods %>% group_by(scenario) %>% summarise(env.change = mean(na.omit(env.change)), env.err = sd(na.omit(env.change)))
 ```
 
-```{r fig.height = 5, fig.width=9}
+```{r fig.height = 6, fig.width=9}
 jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yellow2", "darkorange", "red3", "#7F0000"))
 
 ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
@@ -275,13 +275,26 @@ per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, c
           axis.title.y = element_text(size = 10),
           legend.position = "none")
 
-multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2), ncol = 1))
+per.ch.plot.2 <- ggplot(ch.mods) + geom_violin(aes(x = scenario, y = env.change, colour = scenario), alpha = 0.5) +
+    geom_boxplot(aes(x = scenario, y = env.change, fill = scenario, colour = scenario), alpha = 0.1) +
+    labs(x = "", y = "% change") + 
+    theme(axis.text.x = element_text(vjust = 0.5, size = 6),
+          axis.text.y = element_text(size = 8),
+          axis.title.y = element_text(size = 10),
+          legend.position = "none")
+
+multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+multiplot(ch.plot, per.ch.plot.2, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 ```
 
 
 ```{r}
 pdf("Plots/Total-change.pdf", width = 9, height = 6)
 multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+dev.off()
+
+pdf("Plots/Total-change-2.pdf", width = 9, height = 6)
+multiplot(ch.plot, per.ch.plot.2, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 dev.off()
 ```
 

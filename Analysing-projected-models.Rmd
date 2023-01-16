@@ -253,17 +253,20 @@ jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yel
 
 ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
    facet_grid(1 ~ scenario) + coord_fixed(ratio = 1) + 
-   scale_fill_gradientn(colours = jet.colours(100)) +
-   labs(fill = "% Envenoming incidence \n change by 2050", x = "", y = "") +
+   scale_fill_gradientn(colours = jet.colours(100), 
+                        breaks = c(-100, -50, 0, 50, 100),
+                        limits = c(-105, 105)) +
+   labs(title = "Envenoming incidence change by 2050", x = "", y = "", fill = "%") +
    theme_light()+
-   theme(legend.position = "top",
+   theme(legend.position = "right",
          axis.text.x = element_blank(),
          axis.text.y = element_text(size = 6),
          axis.title.y =  element_blank(),
          legend.text = element_text(vjust = 0.5, size = 8),
          legend.title = element_text(size = 10),
-         strip.text.x = element_text(size = 8),
-         strip.text.y = element_blank())
+         strip.text.x = element_text(size = 7),
+         strip.text.y = element_blank(),
+         plot.title = element_text(hjust = 0.5))
 
 per.ch.plot <- ggplot(per.change) + geom_bar(aes(x = scenario, y = env.change, colour = scenario), stat = "identity", alpha = 0.5) +
     labs(x = "", y = "Average % change") +

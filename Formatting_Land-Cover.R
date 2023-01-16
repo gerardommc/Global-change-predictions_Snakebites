@@ -74,10 +74,10 @@ agr.1 <- resample(agr.5, agr, method = "bilinear")
 prop.agr <- mask(agr.1, agr)
 
 #Writing up distance to proportion of agricultural land
-dir.create("Porportion-agriculture")
-sapply(ssps, function(x){dir.create(paste0("Porportion-agriculture", "/", x))})
+dir.create("Proportion-agriculture")
+sapply(ssps, function(x){dir.create(paste0("Proportion-agriculture", "/", x))})
 
-fold.agr <- paste0("Porportion-agriculture", substr(un.fold, 11, nchar(un.fold)))
+fold.agr <- paste0("Proportion-agriculture", substr(un.fold, 11, nchar(un.fold)))
 sapply(fold.agr, function(x){dir.create(x)})
 
 fold.agr.files <- rep(fold.agr, each = 41)

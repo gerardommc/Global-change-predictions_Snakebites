@@ -504,6 +504,15 @@ dev.off()
 ```{r}
 lc.files <- list.files("Land-cover-5km", "tif", full.names = T, recursive = T)
 
+lc.2050.r <- stack(list.files("Land-cover-5km", "2050.tif", full.names = T, recursive = T))
+lc.2050.df <- data.frame(rasterToPoints(lc.2050.r))
+names(lc.2050.df) <- c("x", "y", scenarios)
+
+lc.2050.mel <- reshape2::melt(lc.2050.df, id.vars = c("x", "y"))
+ch.mods$land.cover <- lc.2050.mel$value
+
+env.2050.lc <- ch.mods %>% group_by(land.cover, scenario) %>% summarise(change.land = mean(env.change, na.rm = T))
+
 lc.r <- stack(lc.files)
 
 #Correr y verificar estas
@@ -529,24 +538,24 @@ med.projs.df$Forest <- lc.forest.m
 ```
 
 ```{r fig.height=5, fig.width=9}
-ggplot(med.projs.df) + geom_point(aes(x = year, y = urban, colour = scenario)) +
-    geom_path(aes(x = year, y = urban, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = year, y = Urban, colour = scenario)) +
+    geom_path(aes(x = year, y = Urban, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.1, "inches")),
               linetype = "dotted") +
     theme_light()
 
-ggplot(med.projs.df) + geom_point(aes(x = year, y = forest, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = year, y = Forest, colour = scenario),
                                   size = 0.5) +
-    geom_path(aes(x = year, y = forest, colour = scenario),
+    geom_path(aes(x = year, y = Forest, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "last"), size = 0.25) +
     theme_light()
 
-ggplot(med.projs.df) + geom_point(aes(x = degraded, y = env.med, colour = scenario),
+ggplot(med.projs.df) + geom_point(aes(x = Degraded, y = env.med, colour = scenario),
                                   size = 0.5) +
-    geom_path(aes(x = degraded, y = env.med, colour = scenario),
+    geom_path(aes(x = Degraded, y = env.med, colour = scenario),
               arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "last"), size = 0.25) +
@@ -554,9 +563,9 @@ ggplot(med.projs.df) + geom_point(aes(x = degraded, y = env.med, colour = scenar
 ```
 
 ```{r fig.height=12, fig.width=3}
-urb.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = forest, colour = env.med, size = env.med), 
+urb.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = Urban, y = Forest, colour = env.med, size = env.med), 
                                                   alpha = 0.5) + 
-    geom_path(aes(x = urban, y = forest),
+    geom_path(aes(x = Urban, y = Forest),
                                  arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "first"), size = 0.25) +
@@ -570,9 +579,9 @@ urb.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = forest, col
 ```
 
 ```{r fig.height=12, fig.width=3}
-agr.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = agric, y = forest, colour = env.med, size = env.med), 
+agr.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = Agric, y = Forest, colour = env.med, size = env.med), 
                                                   alpha = 0.5) + 
-     geom_path(aes(x = agric, y = forest),
+     geom_path(aes(x = Agric, y = Forest),
                                  arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "first"), size = 0.25) +
@@ -586,9 +595,9 @@ agr.for.plot <- ggplot(med.projs.df) + geom_point(aes(x = agric, y = forest, col
 ```
 
 ```{r  fig.height=12, fig.width=3}
-urb.agric.plot <- ggplot(med.projs.df) + geom_point(aes(x = urban, y = agric, colour = env.med, size = env.med),
+urb.agric.plot <- ggplot(med.projs.df) + geom_point(aes(x = Urban, y = Agric, colour = env.med, size = env.med),
                                                     alpha = 0.5) + 
-    geom_path(aes(x = urban, y = agric), arrow = arrow(type = "closed", 
+    geom_path(aes(x = Urban, y = Agric), arrow = arrow(type = "closed", 
                           length = unit(0.15, "inches"),
                           ends = "last"), size = 0.25) +  guides(size = "none") +
     scale_colour_gradientn(colours = (inferno(100))) +
@@ -617,19 +626,29 @@ med.projs.df.dif$Decline <- rates.df$Percent.decline
 med.projs.df.dif$Scenario <- med.projs.df.1050[med.projs.df.1050$year== 2010]$scenario
 
 med.projs.dif.melt <- melt(med.projs.df.dif, measure.vars = c("Urban", "Tea", "Agricultural", "Degraded", "Forest"))
+med.projs.dif.melt$env.change <- env.2050.lc$change.land
 ```
 
 ```{r fig.height=12, fig.width=5}
-incid.lc.change <- ggplot(med.projs.dif.melt, aes(x = value, y = Decline,
+incid.lc.change <- ggplot(med.projs.dif.melt, aes(x = value, y = env.change,
                                label = Scenario)) + geom_point(aes(colour = Scenario)) +
     facet_grid(variable~1) + 
     geom_vline(xintercept = 0, linetype = 2, colour = "grey50") + 
-    geom_text(nudge_y = 1,  size = 3) +
+    geom_text(nudge_y = 2,  size = 3) +
     labs(x = "% Land cover change", y = "% Envenoming incidence change") +
     theme(legend.position = "none")
 pdf("Plots/Incidence-LC-change.pdf", width = 5, height = 12)
 incid.lc.change
 dev.off()
 ```
-
+```{r}
+ggplot(med.projs.dif.melt, aes(x = value, y = env.change,
+                               label = Scenario)) + geom_point(aes(colour = Scenario)) +
+    facet_grid(variable~1) + 
+    geom_vline(xintercept = 0, linetype = 2, colour = "grey50") + 
+    geom_text(nudge_y = 2,  size = 3) +
+    labs(x = "% Land cover change", y = "% Envenoming incidence change") +
+    theme(legend.position = "none")
+```
+ 
 

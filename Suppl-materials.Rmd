@@ -1,0 +1,44 @@
+---
+title: "Supplementary materials"
+author: "Gerardo Martín"
+date: "2023-02-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Human population density
+
+```{r echo=F, fig.align='center', fig.cap="Human population density of 2010 at 1 km.", fig.height=6, fig.width=4, message=F, warning=F}
+library(raster)
+popn <- raster("pop_2010.asc")
+plot(popn)
+```
+
+## Digital elevation model
+
+```{r dem, echo=F, fig.height=6, fig.width=4, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Digital elevation model of Sri Lanka at 1 km."}
+dem <- raster("LKA-dem-WGS84-1km.tif")
+dem <- projectRaster(dem, crs = CRS(proj4string(popn)))
+plot(dem)
+```
+
+
+
+### Human population density predictions
+
+```{r echo = F, fig.align='center', fig.cap="Population predictions for 2010-2050 in each shares socioeconomic pathway.", fig.width=6, fig.height=4}
+pop.files <- list.files("Population-5km", "tif", full.names = T, recursive = T)
+pop.preds <- stack(pop.files)
+pop.preds.sum <- cellStats(pop.preds, sum)
+scen <- expand.grid(year = 2010:2050, SSP = c("SSP1", "SSP2", "SSP5"))
+scen$popn <- pop.preds.sum
+
+library(ggplot2)
+
+ggplot(scen) + geom_step(aes(x = year, y = popn, colour = SSP)) +
+    geom_point(aes(x = year, y = popn, colour = SSP), size = 0.2)
+```
+

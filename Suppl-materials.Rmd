@@ -9,25 +9,87 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Human population density
-
-```{r echo=F, fig.align='center', fig.cap="Human population density of 2010 at 1 km.", fig.height=6, fig.width=4, message=F, warning=F}
-library(raster)
-popn <- raster("pop_2010.asc")
-plot(popn)
-```
-
 ## Digital elevation model
 
 ```{r dem, echo=F, fig.height=6, fig.width=4, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Digital elevation model of Sri Lanka at 1 km."}
+library(raster)
+popn <- raster("pop_2010.asc")
 dem <- raster("LKA-dem-WGS84-1km.tif")
 dem <- projectRaster(dem, crs = CRS(proj4string(popn)))
 plot(dem)
 ```
 
+\newpage
 
+## Snake distributions
 
-### Human population density predictions
+```{r echo = F}
+sn.files <- list.files("Snakes", "tif", recursive = T, full.names = T)
+df.files.1 <- expand.grid(species = c("B. caeruleus", "B. ceylonicus", "D. russelli", "E. carinatus", "H. spp", "N. naja", "T. trigonocephalus"), year = 2010:2050, GCM = c(""), ssp = c("SSP1"))
+df.files.25 <- expand.grid(species = c("B. caeruleus", "B. ceylonicus", "D. russelli", "E. carinatus", "H. spp", "N. naja", "T. trigonocephalus"), year = 2010:2050, GCM = c("CNRM-CM5", "GFDL-CM3", "MPI-ESM-LR"), ssp = c("SSP2", "SSP5"))
+
+df.files <- rbind(df.files.1, df.files.25)
+
+id.ssp1 <- which(df.files$ssp == "SSP1" & df.files$year %in% c(2010, 2024, 2037, 2050))
+id.ssp2 <- which(df.files$ssp == "SSP2" & df.files$year %in% c(2010, 2024, 2037, 2050))
+id.ssp5 <- which(df.files$ssp == "SSP5" & df.files$year %in% c(2010, 2024, 2037, 2050))
+
+snakes.ssp1 <- lapply(sn.files[id.ssp1], raster)
+snakes.ssp2 <- lapply(sn.files[id.ssp2], raster)
+snakes.ssp5 <- lapply(sn.files[id.ssp5], raster)
+```
+
+### SSP1
+
+```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP1 in four time steps.", fig.width=12, fig.height=10}
+par(mfrow = c(4, 7))
+for(i in seq_along(id.ssp1)){
+    plot(snakes.ssp1[[i]], main = paste0(df.files$species[id.ssp1[i]],": ", 
+                                         df.files$year[id.ssp1[i]], " (", 
+                                         df.files$ssp[id.ssp1[i]], ", ",
+                                         df.files$GCM[id.ssp1[i]], ")"),
+         cex.main = 0.5)
+}
+```
+
+\newpage
+
+### SSP2
+
+```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP2 in four time steps and three global circulation models.", fig.width=12, fig.height=10}
+par(mfrow = c(4, 7))
+for(i in seq_along(id.ssp2)){
+    plot(snakes.ssp2[[i]], main = paste0(df.files$species[id.ssp2[i]],": ", 
+                                         df.files$year[id.ssp2[i]], " (", 
+                                         df.files$ssp[id.ssp2[i]], ", ",
+                                         df.files$GCM[id.ssp2[i]], ")"),
+         cex.main = 0.5)
+}
+```
+
+\newpage
+
+### SSP5
+
+```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP5 in four time steps and three global circulation models.", fig.width=12, fig.height=10}
+par(mfrow = c(4, 7))
+for(i in seq_along(id.ssp5)){
+    plot(snakes.ssp5[[i]], main = paste0(df.files$species[id.ssp5[i]],": ", 
+                                         df.files$year[id.ssp5[i]], " (", 
+                                         df.files$ssp[id.ssp5[i]], ", ",
+                                         df.files$GCM[id.ssp5[i]], ")"),
+         cex.main = 0.5)
+}
+```
+
+\newpage
+
+## Human population density predictions
+
+```{r echo=F, fig.align='center', fig.cap="Human population density of 2010 at 1 km.", fig.height=6, fig.width=4, message=F, warning=F}
+plot(popn)
+```
+
 
 ```{r echo = F, fig.align='center', fig.cap="Population predictions for 2010-2050 in each shares socioeconomic pathway.", fig.width=6, fig.height=4}
 pop.files <- list.files("Population-5km", "tif", full.names = T, recursive = T)

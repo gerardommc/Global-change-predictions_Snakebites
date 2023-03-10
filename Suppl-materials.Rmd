@@ -9,11 +9,39 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Land cover
+
+```{r echo=F, fig.height=5, fig.width=4, fig.cap="Land cover base layer upon which land cover predictions were generated. 6 = Tea, 5 = Urban, 4 = Agricultural, 3 = Degraded forest, 2 = Forest, 1 = Water.", fig.align='center', message=FALSE, warning=FALSE}
+lc <- readRDS("Data-objects/Snakes-env-data.rds")
+library(raster)
+lc.r <- rasterFromXYZ(lc[, c("x", "y", "land.cover")])
+plot(lc.r)
+```
+
+\newpage
+
+## Tree cover
+
+```{r echo=F, fig.height=5, fig.width=4, fig.cap="Base tree cover layer used for generating tree cover predictions.", fig.align='center'}
+tc.r <- rasterFromXYZ(lc[, c("x", "y", "tree")])
+plot(tc.r)
+```
+
+\newpage
+
+
+## Human population density
+
+```{r echo=F, fig.align='center', fig.cap="Human population density of 2010 at 1 km.", fig.height=6, fig.width=4, message=F, warning=F}
+popn <- raster("pop_2010.asc")
+plot(popn)
+```
+
+\newpage
+
 ## Digital elevation model
 
 ```{r dem, echo=F, fig.height=6, fig.width=4, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Digital elevation model of Sri Lanka at 1 km."}
-library(raster)
-popn <- raster("pop_2010.asc")
 dem <- raster("LKA-dem-WGS84-1km.tif")
 dem <- projectRaster(dem, crs = CRS(proj4string(popn)))
 plot(dem)
@@ -84,12 +112,7 @@ for(i in seq_along(id.ssp5)){
 
 \newpage
 
-## Human population density predictions
-
-```{r echo=F, fig.align='center', fig.cap="Human population density of 2010 at 1 km.", fig.height=6, fig.width=4, message=F, warning=F}
-plot(popn)
-```
-
+## Human population predictions
 
 ```{r echo = F, fig.align='center', fig.cap="Population predictions for 2010-2050 in each shares socioeconomic pathway.", fig.width=6, fig.height=4}
 pop.files <- list.files("Population-5km", "tif", full.names = T, recursive = T)
@@ -103,4 +126,6 @@ library(ggplot2)
 ggplot(scen) + geom_step(aes(x = year, y = popn, colour = SSP)) +
     geom_point(aes(x = year, y = popn, colour = SSP), size = 0.2)
 ```
+
+
 

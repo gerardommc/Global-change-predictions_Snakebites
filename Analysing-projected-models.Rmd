@@ -376,32 +376,37 @@ proj.sn <- lapply(seq_along(projections), function(x){
 })
 
 proj.sn.df <- rbindlist(proj.sn)
+proj.sn.df$scenario <- as.factor(proj.sn.df$scenario)
+levels(proj.sn.df$scenario) <- c("SSP1", "SSP2\n CNRM-CM5", "SSP2\n GFDL-CM3",
+                                 "SSP2\n MPI-ESM-LR", "SSP5\n CNRM-CM5",
+                                 "SSP5\n GFDL-CM3", "SSP5\n MPI-ESM-LR")
 ```
 
 ```{r fig.height=15, fig.width=6.5}
 ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = as.factor(Species))) + 
    facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
    scale_fill_manual(values = rev(plasma(5))[2:5]) + 
-   labs(fill = "") +
+   labs(fill = "", x = "x (metres)", y = "y (metres)") +
    theme_light() + 
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
          axis.text.y = element_text(size = 6),
-         legend.text = element_text(face = "italic", size = 12),
-         strip.text.x = element_text(size = 12),
-         strip.text.y = element_text(size = 12))
-pdf("Plots/Snake-species-time-scenario.pdf", width = 6.5, height = 15)
+         legend.text = element_text(face = "italic", size = 14),
+         strip.text.x = element_text(size = 14),
+         strip.text.y = element_text(size = 14))
+pdf("Plots/Snake-species-time-scenario.pdf", width = 11, height = 10)
 ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) + 
-   facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
+   facet_grid(year ~ scenario) + coord_fixed(ratio = 1) + 
    scale_fill_manual(values = rev(inferno(5))[2:5]) + 
-   labs(fill = "") +
+   labs(fill = "", x = "x (metres)", y = "y (metres)") +
    theme_light() + 
    theme(legend.position = "bottom",
          axis.text.x = element_text(angle = 45, vjust = 0.5, size = 6),
          axis.text.y = element_text(size = 6),
+         axis.title = element_text(size = 12),
          strip.text.x = element_text(size = 12),
-         strip.text.y = element_text(size = 12),
-         legend.text = element_text(face = "italic", size = 12))
+         strip.text.y = element_text(size = 14),
+         legend.text = element_text(face = "italic", size = 16))
 dev.off()
 ```
 

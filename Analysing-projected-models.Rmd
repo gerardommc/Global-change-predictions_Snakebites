@@ -248,7 +248,7 @@ library(dplyr)
 per.change <- ch.mods %>% group_by(scenario) %>% summarise(env.change = mean(na.omit(env.change)), env.err = sd(na.omit(env.change)))
 ```
 
-```{r fig.height = 6, fig.width=9}
+```{r fig.height = 5.5, fig.width=9}
 jet.colours <- colorRampPalette(c("navyblue", "royalblue4", "deepskyblue3", "yellow2", "darkorange", "red3", "#7F0000"))
 
 ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) + 
@@ -256,12 +256,11 @@ ch.plot <- ggplot(ch.mods) + geom_raster(aes(x = x, y = y, fill = env.change)) +
    scale_fill_gradientn(colours = jet.colours(100), 
                         breaks = c(-100, -50, 0, 50, 100),
                         limits = c(-105, 105)) +
-   labs(title = "Envenoming incidence change by 2050", x = "", y = "", fill = "%") +
+   labs(title = "Envenoming incidence change by 2050", x = "", y = "y (metres)", fill = "%") +
    theme_light()+
    theme(legend.position = "right",
          axis.text.x = element_blank(),
          axis.text.y = element_text(size = 6),
-         axis.title.y =  element_blank(),
          legend.text = element_text(vjust = 0.5, size = 8),
          legend.title = element_text(size = 10),
          strip.text.x = element_text(size = 7),
@@ -294,6 +293,10 @@ multiplot(ch.plot, per.ch.plot, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2
 dev.off()
 
 pdf("Plots/Total-change-2.pdf", width = 9, height = 6)
+multiplot(ch.plot, per.ch.plot.2, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+dev.off()
+
+postscript("Plots/Total-change-2.eps", width = 9, height = 5.5)
 multiplot(ch.plot, per.ch.plot.2, cols = 1,  layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 dev.off()
 ```
@@ -380,10 +383,12 @@ proj.sn.df$scenario <- as.factor(proj.sn.df$scenario)
 levels(proj.sn.df$scenario) <- c("SSP1", "SSP2\n CNRM-CM5", "SSP2\n GFDL-CM3",
                                  "SSP2\n MPI-ESM-LR", "SSP5\n CNRM-CM5",
                                  "SSP5\n GFDL-CM3", "SSP5\n MPI-ESM-LR")
+
+proj.sn.df.1 <- subset(proj.sn.df, year %in% c(2010, 2050))
 ```
 
 ```{r fig.height=15, fig.width=6.5}
-ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = as.factor(Species))) + 
+ggplot(proj.sn.df.1) + geom_tile(aes(x = x, y = y, fill = as.factor(Species))) + 
    facet_grid(scenario ~ year) + coord_fixed(ratio = 1) + 
    scale_fill_manual(values = rev(plasma(5))[2:5]) + 
    labs(fill = "", x = "x (metres)", y = "y (metres)") +
@@ -394,8 +399,8 @@ ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = as.factor(Species))) +
          legend.text = element_text(face = "italic", size = 14),
          strip.text.x = element_text(size = 14),
          strip.text.y = element_text(size = 14))
-pdf("Plots/Snake-species-time-scenario.pdf", width = 11, height = 10)
-ggplot(proj.sn.df) + geom_tile(aes(x = x, y = y, fill = Species)) + 
+pdf("Plots/Snake-species-time-scenario.pdf", width = 11, height = 7)
+ggplot(proj.sn.df.1) + geom_tile(aes(x = x, y = y, fill = Species)) + 
    facet_grid(year ~ scenario) + coord_fixed(ratio = 1) + 
    scale_fill_manual(values = rev(inferno(5))[2:5]) + 
    labs(fill = "", x = "x (metres)", y = "y (metres)") +
@@ -452,15 +457,15 @@ df.dec.ssp.long <- reshape2::melt(df.dec.ssp, id.vars = c("x", "y"))
 dec.maps <- ggplot(df.dec.ssp.long) + geom_raster(aes(x = x, y = y, fill = as.factor(value))) +
     facet_grid(1~variable) + coord_fixed(ratio = 1) + 
     scale_fill_manual(values = (inferno(5)[c(1, 2, 3, 4)])) + 
-    labs(fill = "") +
+    labs(fill = "No. of\nRCMs", x = "x (metres)", y = "y (metres)") +
     theme_light() + 
     theme(legend.position = "right",
-         axis.text.x = element_blank(),
-         axis.title.x = element_blank(),
+         axis.text.x = element_text(angle = 45, vjust = 0.7, size = 6),
          axis.text.y = element_text(size = 6),
          strip.text.x = element_text(size = 12),
          strip.text.y = element_blank(),
          legend.text = element_text(face = "italic", size = 12))
+dec.maps
 ```
 
 ```{r}
@@ -499,6 +504,9 @@ dec.prop.plot <- ggplot(dec.prop, aes(x = "", y = prop, fill = as.factor(gcms)))
 ```{r}
 multiplot(dec.maps, dec.prop.plot, layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 pdf("Plots/Decrease-maps.pdf",width = 5.5, height = 6)
+multiplot(dec.maps, dec.prop.plot, layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
+dev.off()
+postscript("Plots/Decrease-maps.eps",width = 5.5, height = 6)
 multiplot(dec.maps, dec.prop.plot, layout = matrix(c(1, 1, 1, 1, 1, 2, 2, 2), ncol = 1))
 dev.off()
 ```

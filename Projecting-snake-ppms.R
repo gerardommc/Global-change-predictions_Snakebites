@@ -140,9 +140,9 @@ for(i in 2:3){
                     x <- resample(x, ref)
               })
               
-              snakes.1 <- stack(list.files(paste0("../SNAKEBITE MODELLING/Snakes Fundamental niches/Projections/", rcp[i], "/", gcm[j], "/", years[k] - 2), "tif", full.names = T))
-              snakes.2 <- stack(list.files(paste0("../SNAKEBITE MODELLING/Snakes Fundamental niches/Projections/", rcp[i], "/", gcm[j], "/", years[k] - 1), "tif", full.names = T))
-              snakes.3 <- stack(list.files(paste0("../SNAKEBITE MODELLING/Snakes Fundamental niches/Projections/", rcp[i], "/", gcm[j], "/", years[k] ), "tif", full.names = T))
+              snakes.1 <- stack(list.files(paste0("Snake-DNCs/", rcp[i], "/", gcm[j], "/", years[k] - 2), "tif", full.names = T))
+              snakes.2 <- stack(list.files(paste0("Snake-DNCs/", rcp[i], "/", gcm[j], "/", years[k] - 1), "tif", full.names = T))
+              snakes.3 <- stack(list.files(paste0("Snake-DNCs/", rcp[i], "/", gcm[j], "/", years[k] ), "tif", full.names = T))
               
               sn <- (snakes.1 + snakes.2 + snakes.3)/3
               proj4string(sn) <- CRS("+init=epsg:5235")

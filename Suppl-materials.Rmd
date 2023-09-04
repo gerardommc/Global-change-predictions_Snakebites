@@ -70,13 +70,16 @@ snakes.ssp5 <- lapply(sn.files[id.ssp5], raster)
 ### SSP1
 
 ```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP1 in four time steps.", fig.width=12, fig.height=10}
-par(mfrow = c(4, 7))
+par(mfrow = c(4, 7), bty = "n", mar = c(2,2,2,2))
 for(i in seq_along(id.ssp1)){
     plot(snakes.ssp1[[i]], main = paste0(df.files$species[id.ssp1[i]],": ", 
                                          df.files$year[id.ssp1[i]], " (", 
                                          df.files$ssp[id.ssp1[i]], ", ",
                                          df.files$GCM[id.ssp1[i]], ")"),
-         cex.main = 0.5)
+         cex.main = 0.7,
+         axes = F,
+         axis = F,
+         legend = F)
 }
 ```
 
@@ -85,13 +88,16 @@ for(i in seq_along(id.ssp1)){
 ### SSP2
 
 ```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP2 in four time steps and three global circulation models.", fig.width=12, fig.height=10}
-par(mfrow = c(4, 7))
+par(mfrow = c(4, 7), bty = "n", mar = c(2,2,2,2))
 for(i in seq_along(id.ssp2)){
     plot(snakes.ssp2[[i]], main = paste0(df.files$species[id.ssp2[i]],": ", 
                                          df.files$year[id.ssp2[i]], " (", 
                                          df.files$ssp[id.ssp2[i]], ", ",
                                          df.files$GCM[id.ssp2[i]], ")"),
-         cex.main = 0.5)
+         cex.main = 0.7,
+         axes = F,
+         axis = F,
+         legend = F)
 }
 ```
 
@@ -100,13 +106,16 @@ for(i in seq_along(id.ssp2)){
 ### SSP5
 
 ```{r echo = F, fig.align='center', fig.cap="Snake suitability predictions for SSP5 in four time steps and three global circulation models.", fig.width=12, fig.height=10}
-par(mfrow = c(4, 7))
+par(mfrow = c(4, 7), bty = "n", mar = c(2,2,2,2))
 for(i in seq_along(id.ssp5)){
     plot(snakes.ssp5[[i]], main = paste0(df.files$species[id.ssp5[i]],": ", 
                                          df.files$year[id.ssp5[i]], " (", 
                                          df.files$ssp[id.ssp5[i]], ", ",
                                          df.files$GCM[id.ssp5[i]], ")"),
-         cex.main = 0.5)
+         cex.main = 0.7,
+         axes = F,
+         axis = F,
+         legend = F)
 }
 ```
 
